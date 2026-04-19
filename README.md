@@ -1,6 +1,6 @@
 # OpenSubAffil
 
-Reference implementation for the paper *OpenSubAffil: A large-scale dataset of sub-institutional name disambiguation and hierarchical structures from OpenAlex*.
+Reference implementation for the paper *OpenSubAffil: A large-scale dataset of sub-institutional name disambiguation and hierarchical structures from OpenAlex*. The released dataset is available at Zenodo: [https://doi.org/10.5281/zenodo.19602783](https://doi.org/10.5281/zenodo.19602783).
 
 Given the OpenAlex raw affiliation strings, the pipeline extracts department-level entities (schools, faculties, centers, labs, ...), deduplicates them within every parent institution, and arranges them into a parent/child hierarchy. The final deliverables are the `opensubaffil_*.csv` tables written to `data/final_output/`.
 
