@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Pipeline artefacts — regenerate locally, do not commit.
+data/*
+!data/.gitkeep
