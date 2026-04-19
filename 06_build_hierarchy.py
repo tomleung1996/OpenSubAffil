@@ -294,15 +294,20 @@ def process_institution(inst_id: Any, inst_df: pd.DataFrame) -> list[dict]:
 def _build_hierarchy_df(all_edges: list[dict], all_depts: pd.DataFrame,
                         inst_name_map: dict[Any, str]) -> pd.DataFrame:
     hierarchy = pd.DataFrame(all_edges, columns=["institution_id", "parent_dept", "child_dept"])
-    root_edges = hierarchy[hierarchy["parent_dept"].astype(str).str.startswith(INSTITUTION_NODE_PREFIX)]
-    attached = (
-        root_edges[["institution_id", "child_dept"]]
+    # A canonical needs a root-completion edge iff it never appears as a child
+    # anywhere -- not just as a child of the virtual root.
+    assigned_children = (
+        hierarchy[["institution_id", "child_dept"]]
         .rename(columns={"child_dept": "canonical_dept_name"})
         .drop_duplicates()
     )
     missing = (
-        all_depts.merge(attached, on=["institution_id", "canonical_dept_name"],
-                        how="left", indicator=True)
+        all_depts.merge(
+            assigned_children,
+            on=["institution_id", "canonical_dept_name"],
+            how="left",
+            indicator=True,
+        )
         .query('_merge == "left_only"')
         .drop(columns="_merge")
     )
@@ -325,6 +330,15 @@ def _build_hierarchy_df(all_edges: list[dict], all_depts: pd.DataFrame,
     )[["institution_id", "parent_dept", "child_dept"]]
 
     combined = pd.concat([hierarchy, completion_edges], ignore_index=True, sort=False)
+
+    parent_counts = (
+        combined.groupby(["institution_id", "child_dept"])["parent_dept"].nunique()
+    )
+    if (parent_counts > 1).any():
+        raise ValueError(
+            "A child department has more than one direct parent after root completion"
+        )
+
     combined["institution_name"] = combined["institution_id"].map(inst_name_map)
     combined["parent_name"] = combined["parent_dept"].astype(str).str.lower()
     combined["child_name"] = combined["child_dept"].astype(str).str.lower()

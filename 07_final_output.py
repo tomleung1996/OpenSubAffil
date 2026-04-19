@@ -59,6 +59,61 @@ def load_raw_affiliation_strings(path: Path, raw_ids: list[int]) -> pd.DataFrame
     return df.sort_values("raw_affiliation_string_id").reset_index(drop=True)
 
 
+def _strip_root_like_names(
+    filtered_raw: pd.DataFrame,
+    filtered_hier: pd.DataFrame,
+    institution_name_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Drop canonical names that coincide (case-insensitively) with their institution's name.
+
+    Such "root-like" names otherwise leak into ``sub_institutions`` as
+    self-referential entries. Rows referencing them are removed from the raw
+    mappings and from the hierarchy (child side, plus the non-root parent
+    side -- genuine root-parent edges where ``parent_name == institution_name``
+    are kept intact).
+    """
+    lookup = institution_name_df[["institution_id", "institution_name"]].copy()
+    lookup["institution_name"] = lookup["institution_name"].astype(str).str.lower()
+
+    candidates = pd.concat(
+        [
+            filtered_hier[["institution_id", "parent_name"]].rename(columns={"parent_name": "canonical_name"}),
+            filtered_hier[["institution_id", "child_name"]].rename(columns={"child_name": "canonical_name"}),
+            filtered_raw[["institution_id", "canonical_dept_name"]].rename(columns={"canonical_dept_name": "canonical_name"}),
+        ],
+        ignore_index=True,
+    ).dropna(subset=["canonical_name"]).drop_duplicates()
+    candidates = candidates.merge(lookup, on="institution_id", how="left", validate="many_to_one")
+    root_like = candidates[
+        candidates["canonical_name"].astype(str).str.lower() == candidates["institution_name"]
+    ][["institution_id", "canonical_name"]].drop_duplicates()
+    if root_like.empty:
+        return filtered_raw, filtered_hier
+
+    def _anti_join(df: pd.DataFrame, keys: pd.DataFrame, on: list[str]) -> pd.DataFrame:
+        merged = df.merge(keys, on=on, how="left", indicator=True)
+        return merged[merged["_merge"] == "left_only"].drop(columns="_merge")
+
+    filtered_raw = _anti_join(
+        filtered_raw,
+        root_like.rename(columns={"canonical_name": "canonical_dept_name"}),
+        ["institution_id", "canonical_dept_name"],
+    )
+    filtered_hier = _anti_join(
+        filtered_hier,
+        root_like.rename(columns={"canonical_name": "child_name"}),
+        ["institution_id", "child_name"],
+    )
+    is_root_parent = filtered_hier["parent_name"] == filtered_hier["institution_name"]
+    non_root = _anti_join(
+        filtered_hier[~is_root_parent],
+        root_like.rename(columns={"canonical_name": "parent_name"}),
+        ["institution_id", "parent_name"],
+    )
+    filtered_hier = pd.concat([filtered_hier[is_root_parent], non_root], ignore_index=True)
+    return filtered_raw, filtered_hier
+
+
 def build_core_tables(
     raw_aff_dept_df: pd.DataFrame,
     hierarchy_df: pd.DataFrame,
@@ -91,24 +146,33 @@ def build_core_tables(
         how="inner",
     )
 
-    # Assign a stable sub_institution_id to every canonical name that appears
-    # anywhere in the hierarchy or in the surviving mappings.
-    canonical_union = pd.concat(
-        [
-            filtered_hier[["institution_id", "parent_name"]].rename(
-                columns={"parent_name": "canonical_name"}
-            ),
-            filtered_hier[["institution_id", "child_name"]].rename(
-                columns={"child_name": "canonical_name"}
-            ),
-            filtered_raw[["institution_id", "canonical_dept_name"]].rename(
-                columns={"canonical_dept_name": "canonical_name"}
-            ),
-        ],
-        ignore_index=True,
+    # Defensive cleanup: drop canonical names that coincide (case-insensitively)
+    # with their institution's own name, along with every edge/mapping that
+    # references them.
+    filtered_raw, filtered_hier = _strip_root_like_names(
+        filtered_raw, filtered_hier, institution_name_df,
     )
+
+    # Canonical name pool: every non-root parent (root parents carry the
+    # institution's own name and must not become a sub-institution entry),
+    # every child, and every name still referenced by the mappings.
+    root_parent_mask = filtered_hier["parent_name"] == filtered_hier["institution_name"]
     sub_institutions_df = (
-        canonical_union.dropna(subset=["canonical_name"])
+        pd.concat(
+            [
+                filtered_hier.loc[~root_parent_mask, ["institution_id", "parent_name"]].rename(
+                    columns={"parent_name": "canonical_name"}
+                ),
+                filtered_hier[["institution_id", "child_name"]].rename(
+                    columns={"child_name": "canonical_name"}
+                ),
+                filtered_raw[["institution_id", "canonical_dept_name"]].rename(
+                    columns={"canonical_dept_name": "canonical_name"}
+                ),
+            ],
+            ignore_index=True,
+        )
+        .dropna(subset=["canonical_name"])
         .drop_duplicates()
         .sort_values(["institution_id", "canonical_name"])
         .reset_index(drop=True)
