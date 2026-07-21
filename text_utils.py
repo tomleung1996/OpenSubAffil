@@ -1,6 +1,7 @@
 """Text normalisation utilities shared across pipeline steps."""
 from __future__ import annotations
 
+import html
 import re
 import unicodedata
 from typing import Any
@@ -46,10 +47,10 @@ def clean_department_string(raw_str: Any) -> str:
     """
     if not raw_str:
         return ""
-    text = str(raw_str).lower()
+    text = html.unescape(str(raw_str)).lower()
     text = re.sub(r"\(.*$", " ", text)
     text = re.sub(r"[^\w\s]", " ", text)
-    text = text.replace("amp", " ")
+    text = re.sub(r"\bamp\b", " ", text)
     text = _WHITESPACE_RE.sub(" ", text).strip()
 
     words = text.split()
