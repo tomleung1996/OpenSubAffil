@@ -18,6 +18,7 @@ Given the OpenAlex raw affiliation strings, the pipeline extracts department-lev
 ├── text_utils.py                      # String cleaning / normalisation helpers
 ├── 01_detect_language.py              # Lingua-based language tagging
 ├── 02_run_ner.py                      # Two-stage NER (span + entity) on GPU
+├── 03a_generate_abbreviation_lookup.py # Optional Gemini abbreviation expansion
 ├── 03_process_ner_output.py           # NER JSONL → flat CSV, org attribution
 ├── 04_deduplicate_departments.py      # Per-institution canonical clustering
 ├── 05_merge_canonical.py              # Attach canonical names to every NER row
@@ -29,7 +30,7 @@ All scripts resolve default paths through `config.py`, which points inside `data
 
 ## Dependencies
 
-Python 3.10+ with `pandas`, `numpy`, `tqdm`, `torch`, `transformers`, `sentence-transformers`, `scikit-learn`, `rapidfuzz`, `lingua-language-detector`, `orjson`. Step 02 requires CUDA; it fans out across all visible devices via `torch.nn.DataParallel`.
+Python 3.10+ with `pandas`, `numpy`, `tqdm`, `torch`, `transformers`, `sentence-transformers`, `scikit-learn`, `rapidfuzz`, `lingua-language-detector`, `orjson`. Regenerating the abbreviation lookup additionally requires `google-genai`. Step 02 requires CUDA; it fans out across all visible devices via `torch.nn.DataParallel`.
 
 ## Inputs
 
@@ -40,13 +41,15 @@ Before running anything, populate `data/` with the CSVs produced by the queries 
 - `sql/03_raw_aff_to_institutions.sql` → `data/raw_aff_to_institutions.csv`
 - `sql/04_education_institutions.sql` → `data/education_institutions.csv`
 
-Step 03 additionally expects `data/raw_department_str_abbr_full.csv`, a two-column (`abbr_name`, `full_name`) lookup produced by a separate LLM pass not included in this repository.
+Step 03 additionally expects `data/raw_department_str_abbr_full.csv`, a two-column (`abbr_name`, `full_name`) lookup. The lookup used for the paper should be retained for exact reproduction because LLM outputs may vary. Alternatively, it can be regenerated from the step-02 NER output with `03a_generate_abbreviation_lookup.py`, which includes the original prompt and uses the Gemini Batch API. Set `GEMINI_API_KEY` before running the script.
 
 ## Running
 
 ```bash
 python 01_detect_language.py
 python 02_run_ner.py
+# Optional: regenerate data/raw_department_str_abbr_full.csv
+python 03a_generate_abbreviation_lookup.py
 python 03_process_ner_output.py
 python 04_deduplicate_departments.py
 python 05_merge_canonical.py
