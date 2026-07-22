@@ -4,12 +4,14 @@ Reference implementation for the paper *OpenSubAffil: A large-scale dataset of s
 
 Given the OpenAlex raw affiliation strings, the pipeline extracts department-level entities (schools, faculties, centers, labs, ...), deduplicates them within every parent institution, and arranges them into a parent/child hierarchy. The final deliverables are the `opensubaffil_*.csv` tables written to `data/final_output/`.
 
+The experiments reported in the paper and the released OpenSubAffil dataset were produced from the publicly accessible August 2025 snapshot of the CWTS version of OpenAlex on Google BigQuery, under the dataset identifier [`cwts-leiden.openalex_2025aug`](https://console.cloud.google.com/bigquery?ws=!1m5!1m4!3m2!1scwts-leiden!2sopenalex_2025aug!23sRESOURCE_LIST).
+
 ## Layout
 
 ```
 .
 ├── data/                              # All inputs / intermediates / outputs live here
-├── sql/                               # OpenAlex extraction queries (SQL Server)
+├── sql/                               # OpenAlex extraction queries
 │   ├── 01_raw_affiliation_strings.sql
 │   ├── 02_institution_id_name.sql
 │   ├── 03_raw_aff_to_institutions.sql
@@ -39,7 +41,7 @@ Python 3.10+ with `pandas`, `numpy`, `tqdm`, `torch`, `transformers`, `sentence-
 
 ## Inputs
 
-Before running anything, populate `data/` with the CSVs produced by the queries in `sql/`. They target a local OpenAlex mirror (SQL Server) and each one already ends with an `ORDER BY`, so the export is deterministic:
+Before running anything, populate `data/` with the CSVs produced by the queries in `sql/`. They target a local OpenAlex mirror and each one already ends with an `ORDER BY`, so the export is deterministic:
 
 - `sql/01_raw_affiliation_strings.sql` → `data/raw_affiliation_string.csv`
 - `sql/02_institution_id_name.sql` → `data/institution_id_name.csv`
