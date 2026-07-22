@@ -8,3 +8,4 @@ data/*
 !data/clustering_purity_evaluation_annotation_expert1.csv
 !data/clustering_purity_evaluation_annotation_expert2.csv
 !data/wikidata_institution_hierarchy.csv
+!data/openalex_education_institution_ror_mapping.csv
