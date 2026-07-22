@@ -14,6 +14,10 @@ Given the OpenAlex raw affiliation strings, the pipeline extracts department-lev
 │   ├── 02_institution_id_name.sql
 │   ├── 03_raw_aff_to_institutions.sql
 │   └── 04_education_institutions.sql
+├── validation/                        # Reproduce the reported validation tables
+│   ├── reproduce_table7.py
+│   ├── reproduce_table8.py
+│   └── reproduce_table9.py
 ├── config.py                          # Shared constants and default paths
 ├── text_utils.py                      # String cleaning / normalisation helpers
 ├── 01_detect_language.py              # Lingua-based language tagging
@@ -62,6 +66,21 @@ Useful debugging flags:
 - `python 02_run_ner.py --max-rows 1000` — quick end-to-end smoke test.
 - `python 04_deduplicate_departments.py --limit-institutions 10` or `--institution-id 37461747` — restrict clustering to a few institutions.
 - `python 06_build_hierarchy.py --top-coverage 0.9` — change the long-tail coverage cutoff.
+
+## Validation
+
+The scripts in `validation/` reproduce Tables 7–9 and print the results to the terminal. Tables 8 and 9 require the final output files produced by step 07. The GERiT hierarchy data are not distributed with this repository and must be supplied separately by users who have access to them.
+
+```bash
+python validation/reproduce_table7.py \
+  data/clustering_purity_evaluation_annotation_expert1.csv \
+  data/clustering_purity_evaluation_annotation_expert2.csv
+
+python validation/reproduce_table8.py
+
+python validation/reproduce_table9.py \
+  --gerit-path /path/to/gerit_institution_hierarchy.csv
+```
 
 ## Outputs
 
