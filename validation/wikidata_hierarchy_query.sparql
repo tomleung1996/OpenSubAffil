@@ -1,0 +1,72 @@
+# Wikidata hierarchy query used to construct the Table 8 benchmark.
+#
+# Run this query once for each country by replacing __COUNTRY_QID__ with:
+# China Q148; United States Q30; United Kingdom Q145; India Q668;
+# Germany Q183; Italy Q38; Japan Q17; Canada Q16; Spain Q29;
+# Australia Q408.
+
+PREFIX bd: <http://www.bigdata.com/rdf#>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+
+SELECT DISTINCT
+  ?root
+  ?openAlexID
+  ?rootLabel
+  ?parent
+  ?parentLabel
+  ?child
+  ?childLabel
+WHERE {
+  ?root wdt:P31/wdt:P279* wd:Q3918;
+        wdt:P17 wd:__COUNTRY_QID__.
+
+  # Exclude university systems from the root set.
+  MINUS {
+    ?root wdt:P31/wdt:P279* wd:Q20857129.
+  }
+
+  # Exclude umbrella roots containing a direct university child.
+  MINUS {
+    ?subUniversity wdt:P361 ?root;
+                   wdt:P31/wdt:P279* wd:Q3918.
+  }
+
+  # Exclude roots subordinate to another higher-education institution,
+  # except where that parent is a university system.
+  MINUS {
+    ?root wdt:P361 ?superRoot.
+    ?superRoot wdt:P31/wdt:P279* wd:Q38723.
+    FILTER NOT EXISTS {
+      ?superRoot wdt:P31/wdt:P279* wd:Q20857129.
+    }
+  }
+
+  # Retrieve direct parent-child edges connected to the root.
+  ?child wdt:P361+ ?root;
+         wdt:P361 ?parent.
+  ?parent wdt:P361* ?root.
+  FILTER (?child != ?parent)
+
+  VALUES ?childType {
+    wd:Q180958   # faculty
+    wd:Q189004   # college
+    wd:Q2467461  # academic department
+  }
+  ?child wdt:P31 ?childType.
+
+  # Remove redundant direct edges when an intermediate path exists.
+  MINUS {
+    ?child wdt:P361 ?middle.
+    ?middle wdt:P361+ ?parent.
+  }
+
+  OPTIONAL {
+    ?root wdt:P10283 ?openAlexID.
+  }
+
+  SERVICE wikibase:label {
+    bd:serviceParam wikibase:language "en".
+  }
+}

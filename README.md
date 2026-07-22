@@ -17,7 +17,8 @@ Given the OpenAlex raw affiliation strings, the pipeline extracts department-lev
 ├── validation/                        # Reproduce the reported validation tables
 │   ├── reproduce_table7.py
 │   ├── reproduce_table8.py
-│   └── reproduce_table9.py
+│   ├── reproduce_table9.py
+│   └── wikidata_hierarchy_query.sparql
 ├── config.py                          # Shared constants and default paths
 ├── text_utils.py                      # String cleaning / normalisation helpers
 ├── 01_detect_language.py              # Lingua-based language tagging
@@ -69,7 +70,7 @@ Useful debugging flags:
 
 ## Validation
 
-The scripts in `validation/` reproduce Tables 7–9 and print the results to the terminal. Tables 8 and 9 require the final output files produced by step 07. The GERiT hierarchy data are not distributed with this repository and must be supplied separately by users who have access to them.
+The scripts in `validation/` reproduce Tables 7–9 and print the results to the terminal. The SPARQL query used to construct the Wikidata benchmark is provided in the same directory. Tables 8 and 9 require the final output files produced by step 07. The GERiT hierarchy data are not distributed with this repository and must be supplied separately by users who have access to them.
 
 ```bash
 python validation/reproduce_table7.py \
