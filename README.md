@@ -76,8 +76,8 @@ The scripts in `validation/` reproduce Tables 7–9 and print the results to the
 
 ```bash
 python validation/reproduce_table7.py \
-  data/clustering_purity_evaluation_annotation_expert1.csv \
-  data/clustering_purity_evaluation_annotation_expert2.csv
+  data/sub_institution_cluster_membership_annotation_expert1.csv \
+  data/sub_institution_cluster_membership_annotation_expert2.csv
 
 python validation/reproduce_table8.py
 
