@@ -187,7 +187,7 @@ def clean_str(raw_str: object) -> str:
     text_value = str(raw_str).lower()
     text_value = re.sub(r"\(.*$", " ", text_value)
     text_value = re.sub(r"[^\w\s]", " ", text_value)
-    text_value = text_value.replace("amp", " ")
+    text_value = re.sub(r"\bamp\b", " ", text_value)
     text_value = re.sub(r"\s+", " ", text_value).strip()
 
     words = text_value.split()
